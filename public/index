@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mail Desk – Personal Organizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Source Sans 3', sans-serif; background: #f5f3ef; color: #2c2c2c; min-height: 100vh; display: flex; }
+
+/* ── Sidebar ── */
+#sidebar {
+  width: 240px; min-height: 100vh; background: #1a1a2e; color: #c8c0d8;
+  display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 20;
+}
+#sidebar-header { padding: 26px 20px 18px; border-bottom: 1px solid #2a2a48; }
+.logo-title { font-family: 'Playfair Display', serif; font-size: 20px; color: #f0e8d8; letter-spacing: .3px; }
+.logo-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #6a5f80; margin-top: 3px; }
+#sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 20px;
+  cursor: pointer; border-left: 3px solid transparent; font-size: 13px;
+  color: #9890a8; transition: all .15s; user-select: none;
+}
+.nav-item:hover { color: #d8d0e8; background: rgba(255,255,255,.04); }
+.nav-item.active { color: #f0e8d8; background: rgba(240,232,216,.1); border-left-color: #c8922a; }
+.nav-badge { margin-left: auto; background: #c8922a; color: #1a1a2e; border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 700; }
+.nav-count { margin-left: auto; font-size: 11px; color: #5a5070; }
+.nav-section { padding: 14px 20px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #4a4060; }
+#sidebar-footer { padding: 14px 20px; border-top: 1px solid #2a2a48; font-size: 11px; color: #4a4060; }
+
+/* ── Main ── */
+#main { margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+#topbar {
+  background: #fff; border-bottom: 1px solid #e8e2da; padding: 13px 28px;
+  display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 10;
+}
+#search { flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 8px 14px; font-size: 14px; font-family: inherit; outline: none; background: #fafaf8; }
+#search:focus { border-color: #c8922a; }
+.btn-primary {
+  background: #1a1a2e; color: #f0e8d8; border: none; border-radius: 8px;
+  padding: 9px 18px; cursor: pointer; font-size: 13px; font-weight: 600;
+  font-family: inherit; letter-spacing: .3px; white-space: nowrap; display: flex; align-items: center; gap: 6px;
+}
+.btn-primary:hover { background: #262645; }
+#content { padding: 26px 28px; flex: 1; }
+
+/* ── Cards & grids ── */
+.card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.07); margin-bottom: 16px; }
+.section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #8880a0; margin-bottom: 14px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 24px; }
+.stat-card { background: #fff; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+.stat-num { font-family: 'Playfair Display', serif; font-size: 34px; line-height: 1; }
+.stat-label { font-size: 11px; color: #888; margin-top: 4px; letter-spacing: .5px; }
+
+/* ── Document rows ── */
+.doc-row {
+  display: flex; align-items: flex-start; gap: 12px; padding: 13px 0;
+  border-bottom: 1px solid #f0ebe4; cursor: pointer; transition: background .1s; border-radius: 4px;
+}
+.doc-row:last-child { border-bottom: none; }
+.doc-row:hover { background: #fdfbf8; }
+.doc-row.unread { background: #fffdf6; }
+.priority-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.doc-icon { font-size: 22px; flex-shrink: 0; }
+.doc-info { flex: 1; min-width: 0; }
+.doc-title { font-size: 14px; margin-bottom: 2px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.doc-title.bold { font-weight: 700; }
+.doc-meta { font-size: 12px; color: #999; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.doc-right { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.doc-amount { font-weight: 700; color: #c0392b; font-size: 14px; }
+.doc-due { font-size: 11px; color: #888; }
+
+/* ── Badges ── */
+.badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+
+/* ── Filters ── */
+#filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.filter-btn {
+  background: #fff; border: 1px solid #ddd; border-radius: 20px; padding: 5px 14px;
+  cursor: pointer; font-size: 12px; font-family: inherit; color: #555; display: flex; align-items: center; gap: 5px; transition: all .15s;
+}
+.filter-btn.active { background: #1a1a2e; color: #f0e8d8; border-color: #1a1a2e; }
+.filter-btn:hover:not(.active) { border-color: #aaa; }
+
+/* ── Upload zone ── */
+#drop-zone {
+  border: 2px dashed #ccc; border-radius: 16px; padding: 60px 40px; text-align: center;
+  cursor: pointer; transition: all .2s; background: #fafaf8;
+}
+#drop-zone.dragover { border-color: #c8922a; background: #fffbf2; }
+#drop-zone:hover { border-color: #bbb; }
+.drop-chips { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+.drop-chip { background: #f0ece6; padding: 4px 14px; border-radius: 20px; font-size: 12px; color: #666; }
+
+/* ── Detail view ── */
+#detail-wrap { max-width: 680px; margin: 0 auto; }
+.detail-header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 20px; }
+.detail-icon { font-size: 44px; }
+.detail-title-area { flex: 1; }
+.detail-title { font-family: 'Playfair Display', serif; font-size: 22px; line-height: 1.3; margin-bottom: 8px; }
+.detail-badges { display: flex; gap: 7px; flex-wrap: wrap; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.kv-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 9px; }
+.kv-key { color: #999; }
+.kv-val { font-weight: 600; text-align: right; max-width: 200px; }
+.key-fact { font-size: 13px; margin-bottom: 8px; display: flex; gap: 8px; }
+.action-card { border-left: 4px solid #c0392b; background: #fdf7f6; }
+.doc-image-wrap { padding: 12px; margin-bottom: 16px; }
+.doc-image-wrap img { width: 100%; border-radius: 8px; max-height: 420px; object-fit: contain; }
+.pdf-placeholder { text-align: center; padding: 30px; background: #f5f3ef; border-radius: 8px; color: #888; font-size: 14px; }
+.btn-back { background: none; border: none; cursor: pointer; color: #999; font-size: 13px; margin-bottom: 16px; font-family: inherit; padding: 0; }
+.btn-back:hover { color: #333; }
+.btn-danger { background: none; border: 1px solid #eee; border-radius: 8px; cursor: pointer; padding: 7px 13px; font-size: 12px; color: #c0392b; font-family: inherit; }
+.btn-danger:hover { background: #fdf0ef; }
+.btn-success { background: #27ae60; color: #fff; border: none; border-radius: 8px; padding: 9px 18px; cursor: pointer; font-size: 13px; font-family: inherit; font-weight: 600; margin-top: 6px; }
+.btn-open-file { background: #2980b9; color: #fff; border: none; border-radius: 8px; padding: 9px 18px; cursor: pointer; font-size: 13px; font-family: inherit; font-weight: 600; margin-top: 6px; margin-right: 8px; }
+.edit-input { border: 1px solid #ddd; border-radius: 6px; padding: 5px 9px; font-size: 13px; font-family: inherit; width: 100%; background: #fafaf8; }
+.edit-select { border: 1px solid #ddd; border-radius: 6px; padding: 5px 9px; font-size: 13px; font-family: inherit; background: #fafaf8; }
+.notes-area { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; font-family: inherit; font-size: 13px; min-height: 80px; resize: vertical; background: #fafaf8; margin-top: 8px; }
+.btn-save { background: #c8922a; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 13px; font-family: inherit; font-weight: 600; margin-top: 10px; }
+
+/* ── Empty state ── */
+.empty-state { text-align: center; padding: 60px 40px; }
+.empty-icon { font-size: 56px; margin-bottom: 16px; }
+.empty-title { font-family: 'Playfair Display', serif; font-size: 22px; margin-bottom: 8px; }
+.empty-sub { color: #888; margin-bottom: 20px; font-size: 14px; }
+
+/* ── Toast ── */
+#toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 100;
+  padding: 12px 20px; border-radius: 10px; font-size: 13px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.3); display: none;
+  animation: slideUp .2s ease;
+}
+@keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── Loader ── */
+#loader-overlay {
+  position: fixed; inset: 0; background: rgba(26,26,46,.6); z-index: 50;
+  display: none; align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+}
+.loader-box { background: #fff; border-radius: 16px; padding: 36px 48px; text-align: center; }
+.loader-spinner { width: 40px; height: 40px; border: 3px solid #eee; border-top-color: #c8922a; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 14px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader-text { font-size: 15px; color: #444; }
+.loader-sub { font-size: 12px; color: #aaa; margin-top: 4px; }
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+  #sidebar { width: 200px; }
+  #main { margin-left: 200px; }
+  .stat-grid { grid-template-columns: repeat(2,1fr); }
+  .detail-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div id="sidebar-header">
+    <div class="logo-title">📬 Mail Desk</div>
+    <div class="logo-sub">Personal Organizer</div>
+  </div>
+  <div id="sidebar-nav">
+    <div class="nav-item active" data-view="dashboard" onclick="showView('dashboard')">
+      🏠 &nbsp;Dashboard <span id="unread-badge" class="nav-badge" style="display:none"></span>
+    </div>
+    <div class="nav-item" data-view="upload" onclick="showView('upload')">⬆️ &nbsp;Upload Mail</div>
+    <div class="nav-section">Categories</div>
+    <div class="nav-item" data-cat="bill" onclick="showCategory('bill')">💳 &nbsp;Bills <span class="nav-count" id="cnt-bill"></span></div>
+    <div class="nav-item" data-cat="tax" onclick="showCategory('tax')">📑 &nbsp;Tax Documents <span class="nav-count" id="cnt-tax"></span></div>
+    <div class="nav-item" data-cat="tax_receipt" onclick="showCategory('tax_receipt')">🧾 &nbsp;Tax Receipts <span class="nav-count" id="cnt-tax_receipt"></span></div>
+    <div class="nav-item" data-cat="notice" onclick="showCategory('notice')">📬 &nbsp;Notices <span class="nav-count" id="cnt-notice"></span></div>
+    <div class="nav-item" data-cat="appointment" onclick="showCategory('appointment')">📅 &nbsp;Appointments <span class="nav-count" id="cnt-appointment"></span></div>
+    <div class="nav-item" data-cat="receipt" onclick="showCategory('receipt')">🧾 &nbsp;Receipts <span class="nav-count" id="cnt-receipt"></span></div>
+    <div class="nav-item" data-cat="insurance" onclick="showCategory('insurance')">🛡️ &nbsp;Insurance <span class="nav-count" id="cnt-insurance"></span></div>
+    <div class="nav-item" data-cat="legal" onclick="showCategory('legal')">⚖️ &nbsp;Legal <span class="nav-count" id="cnt-legal"></span></div>
+    <div class="nav-item" data-cat="financial" onclick="showCategory('financial')">🏦 &nbsp;Financial <span class="nav-count" id="cnt-financial"></span></div>
+    <div class="nav-item" data-cat="other" onclick="showCategory('other')">📄 &nbsp;Other <span class="nav-count" id="cnt-other"></span></div>
+  </div>
+  <div id="sidebar-footer" id="doc-count-footer">Loading…</div>
+</nav>
+
+<!-- Main -->
+<div id="main">
+  <div id="topbar">
+    <input id="search" type="text" placeholder="Search documents, senders, amounts…" oninput="renderList()">
+    <button class="btn-primary" onclick="showView('upload')">+ Upload</button>
+  </div>
+  <div id="content"></div>
+</div>
+
+<!-- Loader overlay -->
+<div id="loader-overlay">
+  <div class="loader-box">
+    <div class="loader-spinner"></div>
+    <div class="loader-text">Reading your document…</div>
+    <div class="loader-sub">AI is analyzing and categorizing</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── Config ──
+const CATEGORIES = {
+  bill:        { label:'Bills',          icon:'💳', color:'#c0392b', bg:'#fdf0ef' },
+  tax:         { label:'Tax Documents',  icon:'📑', color:'#d35400', bg:'#fef5ee' },
+  tax_receipt: { label:'Tax Receipts',   icon:'🧾', color:'#c8922a', bg:'#fefaee' },
+  notice:      { label:'Notices',        icon:'📬', color:'#8e44ad', bg:'#f8f3fd' },
+  appointment: { label:'Appointments',   icon:'📅', color:'#2471a3', bg:'#eff6fd' },
+  receipt:     { label:'Receipts',       icon:'🧾', color:'#1e8449', bg:'#edfaf3' },
+  insurance:   { label:'Insurance',      icon:'🛡️', color:'#117a65', bg:'#edf8f6' },
+  legal:       { label:'Legal',          icon:'⚖️', color:'#6c3483', bg:'#f5eefb' },
+  financial:   { label:'Financial',      icon:'🏦', color:'#1a5276', bg:'#eaf2f8' },
+  other:       { label:'Other',          icon:'📄', color:'#7f8c8d', bg:'#f4f6f7' },
+};
+const PRIORITY = {
+  urgent: { label:'Urgent', color:'#c0392b' },
+  high:   { label:'High',   color:'#d35400' },
+  normal: { label:'Normal', color:'#27ae60' },
+  low:    { label:'Low',    color:'#95a5a6' },
+};
+
+let allDocs = [];
+let currentView = 'dashboard';
+let currentCategory = null;
+let currentDocId = null;
+
+// ── API ──
+async function api(method, url, body) {
+  const opts = { method, headers:{} };
+  if (body && !(body instanceof FormData)) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  } else if (body) {
+    opts.body = body;
+  }
+  const r = await fetch(url, opts);
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error || r.statusText); }
+  return r.json();
+}
+
+async function loadDocs() {
+  try {
+    allDocs = await api('GET', '/api/documents');
+    updateSidebarCounts();
+    renderContent();
+  } catch(e) { showToast('Failed to load documents: ' + e.message, 'error'); }
+}
+
+function updateSidebarCounts() {
+  const counts = {};
+  allDocs.forEach(d => counts[d.category] = (counts[d.category]||0)+1);
+  Object.keys(CATEGORIES).forEach(k => {
+    const el = document.getElementById('cnt-' + k);
+    if (el) el.textContent = counts[k] || '';
+  });
+  const unread = allDocs.filter(d => d.status === 'unread').length;
+  const badge = document.getElementById('unread-badge');
+  badge.textContent = unread;
+  badge.style.display = unread ? 'inline-block' : 'none';
+  document.getElementById('sidebar-footer').textContent = allDocs.length + ' document' + (allDocs.length!==1?'s':'') + ' stored';
+}
+
+// ── Views ──
+function showView(v) {
+  currentView = v;
+  currentDocId = null;
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === v);
+  });
+  renderContent();
+}
+function showCategory(cat) {
+  currentView = 'category';
+  currentCategory = cat;
+  currentDocId = null;
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.cat === cat);
+  });
+  renderContent();
+}
+function showDetail(id) {
+  currentView = 'detail';
+  currentDocId = id;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  renderContent();
+  // Mark read
+  const doc = allDocs.find(d => d.id === id);
+  if (doc && doc.status === 'unread') {
+    api('PATCH', '/api/documents/' + id, { status: 'read' }).then(() => {
+      doc.status = 'read';
+      updateSidebarCounts();
+    });
+  }
+}
+
+function renderContent() {
+  const el = document.getElementById('content');
+  if (currentView === 'dashboard') el.innerHTML = renderDashboard();
+  else if (currentView === 'upload')   el.innerHTML = renderUpload();
+  else if (currentView === 'category') el.innerHTML = renderCategory();
+  else if (currentView === 'detail')   el.innerHTML = renderDetail();
+  attachUploadHandlers();
+}
+
+// ── Dashboard ──
+function renderDashboard() {
+  const urgent = allDocs.filter(d => d.priority==='urgent'||d.priority==='high');
+  const unread = allDocs.filter(d => d.status==='unread').length;
+  const now = new Date();
+  const dueSoon = allDocs.filter(d => {
+    if (!d.dueDate) return false;
+    const diff = (new Date(d.dueDate) - now) / 86400000;
+    return diff >= 0 && diff <= 14;
+  });
+
+  let html = `
+  <div class="stat-grid">
+    <div class="stat-card" style="border-top:3px solid #c8922a">
+      <div class="stat-num">${allDocs.length}</div><div class="stat-label">Total Documents</div>
+    </div>
+    <div class="stat-card" style="border-top:3px solid #c0392b">
+      <div class="stat-num" style="color:${unread>0?'#c0392b':'#2c2c2c'}">${unread}</div><div class="stat-label">Unread</div>
+    </div>
+    <div class="stat-card" style="border-top:3px solid #d35400">
+      <div class="stat-num" style="color:${urgent.length>0?'#d35400':'#2c2c2c'}">${urgent.length}</div><div class="stat-label">Urgent / High</div>
+    </div>
+    <div class="stat-card" style="border-top:3px solid #2471a3">
+      <div class="stat-num" style="color:${dueSoon.length>0?'#2471a3':'#2c2c2c'}">${dueSoon.length}</div><div class="stat-label">Due in 14 Days</div>
+    </div>
+  </div>`;
+
+  if (urgent.length > 0) {
+    html += `<div class="card" style="border-left:4px solid #c0392b;background:#fdfaf9;margin-bottom:20px">
+      <div class="section-label">⚠️ Needs Attention</div>`;
+    urgent.slice(0,4).forEach(d => { html += docRowHTML(d); });
+    html += `</div>`;
+  }
+
+  if (allDocs.length === 0) {
+    html += `<div class="card empty-state">
+      <div class="empty-icon">📬</div>
+      <div class="empty-title">No documents yet</div>
+      <div class="empty-sub">Upload your first piece of mail to get started</div>
+      <button class="btn-primary" onclick="showView('upload')">+ Upload Document</button>
+    </div>`;
+    return html;
+  }
+
+  html += renderFilterBar() + renderDocList(allDocs);
+  return html;
+}
+
+function renderFilterBar() {
+  const counts = {};
+  allDocs.forEach(d => counts[d.category] = (counts[d.category]||0)+1);
+  let html = `<div id="filters"><button class="filter-btn active" onclick="setFilter('all',this)">All (${allDocs.length})</button>`;
+  Object.keys(counts).forEach(k => {
+    const cat = CATEGORIES[k];
+    html += `<button class="filter-btn" onclick="setFilter('${k}',this)">${cat.icon} ${cat.label} <span style="margin-left:2px;opacity:.7">${counts[k]}</span></button>`;
+  });
+  return html + `</div>`;
+}
+function setFilter(cat, btn) {
+  document.querySelectorAll('#filters .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const docs = cat === 'all' ? allDocs : allDocs.filter(d => d.category === cat);
+  document.getElementById('doc-list-wrap').innerHTML = renderDocList(docs, true);
+}
+
+function renderDocList(docs, inner) {
+  const q = document.getElementById('search')?.value?.toLowerCase() || '';
+  const filtered = docs.filter(d =>
+    !q || d.title?.toLowerCase().includes(q) || d.sender?.toLowerCase().includes(q) || d.summary?.toLowerCase().includes(q)
+  );
+  let html = inner ? '' : `<div id="doc-list-wrap">`;
+  html += `<div class="card"><div class="section-label">${filtered.length} document${filtered.length!==1?'s':''}</div>`;
+  if (!filtered.length) html += `<div style="text-align:center;padding:24px;color:#aaa;font-size:14px">No results</div>`;
+  filtered.forEach(d => { html += docRowHTML(d); });
+  html += `</div>`;
+  if (!inner) html += `</div>`;
+  return html;
+}
+function renderList() {
+  const wrap = document.getElementById('doc-list-wrap');
+  if (wrap) wrap.innerHTML = renderDocList(allDocs, true);
+}
+
+function docRowHTML(d) {
+  const cat = CATEGORIES[d.category] || CATEGORIES.other;
+  const pri = PRIORITY[d.priority] || PRIORITY.normal;
+  const unread = d.status === 'unread';
+  return `<div class="doc-row ${unread?'unread':''}" onclick="showDetail('${d.id}')">
+    <div class="priority-dot" style="background:${pri.color}"></div>
+    <div class="doc-icon">${cat.icon}</div>
+    <div class="doc-info">
+      <div class="doc-title ${unread?'bold':''}">${esc(d.title||'Untitled')}${unread?` <span class="badge" style="background:#1a1a2e;color:#f0e8d8;font-size:10px">New</span>`:''}</div>
+      <div class="doc-meta">${esc(d.sender||'Unknown sender')} · ${fmtDate(d.uploadedAt)}${d.actionRequired?' · ⚡ Action needed':''}</div>
+    </div>
+    <div class="doc-right">
+      ${d.amount?`<div class="doc-amount">${esc(d.amount)}</div>`:''}
+      ${d.dueDate?`<div class="doc-due">Due ${d.dueDate}</div>`:''}
+      <span class="badge" style="color:${cat.color};background:${cat.bg}">${cat.label}</span>
+    </div>
+  </div>`;
+}
+
+// ── Upload ──
+function renderUpload() {
+  return `<div style="max-width:560px;margin:0 auto">
+    <h2 style="margin-bottom:8px;font-family:'Playfair Display',serif">📬 Upload Document</h2>
+    <p style="color:#888;margin-bottom:28px;font-size:14px">Take a photo or scan your mail — AI will read, categorize, and summarize it. The file is stored so you can view it any time.</p>
+    <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div style="font-size:48px;margin-bottom:14px">📄</div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:8px">Drop your document here</div>
+      <div style="font-size:13px;color:#888;margin-bottom:4px">or click to choose a file</div>
+      <div class="drop-chips">
+        <span class="drop-chip">📷 Photo</span>
+        <span class="drop-chip">🖨️ Scan</span>
+        <span class="drop-chip">📄 PDF</span>
+      </div>
+    </div>
+    <input id="file-input" type="file" accept="image/*,application/pdf" style="display:none" onchange="handleFileSelect(this)">
+    <div class="card" style="margin-top:20px">
+      <div class="section-label">What gets extracted automatically</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${['Category & priority','Sender name','Amount due','Due dates','Appointment dates','Action items','Key facts','Tax year']
+          .map(t=>`<div style="font-size:13px;color:#555;display:flex;gap:6px"><span style="color:#c8922a">✓</span>${t}</div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function attachUploadHandlers() {
+  const dz = document.getElementById('drop-zone');
+  if (!dz) return;
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) uploadFile(file);
+  });
+}
+function handleFileSelect(input) {
+  const file = input.files[0];
+  if (file) uploadFile(file);
+  input.value = '';
+}
+async function uploadFile(file) {
+  document.getElementById('loader-overlay').style.display = 'flex';
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const doc = await fetch('/api/documents/upload', { method:'POST', body: fd })
+      .then(async r => { if(!r.ok){ const e=await r.json().catch(()=>({error:r.statusText})); throw new Error(e.error); } return r.json(); });
+    allDocs.unshift(doc);
+    updateSidebarCounts();
+    showToast('✓ "' + doc.title + '" organized successfully');
+    showDetail(doc.id);
+  } catch(e) {
+    showToast('Upload failed: ' + e.message, 'error');
+    showView('upload');
+  }
+  document.getElementById('loader-overlay').style.display = 'none';
+}
+
+// ── Category ──
+function renderCategory() {
+  const cat = CATEGORIES[currentCategory] || CATEGORIES.other;
+  const docs = allDocs.filter(d => d.category === currentCategory);
+  let html = `<button class="btn-back" onclick="showView('dashboard')">← Back</button>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+    <span style="font-size:36px">${cat.icon}</span>
+    <div>
+      <h2 style="font-family:'Playfair Display',serif">${cat.label}</h2>
+      <div style="font-size:13px;color:#888">${docs.length} document${docs.length!==1?'s':''}</div>
+    </div>
+  </div>`;
+  if (!docs.length) {
+    html += `<div class="card" style="text-align:center;padding:40px;color:#aaa">No ${cat.label.toLowerCase()} documents yet</div>`;
+  } else {
+    html += `<div class="card">`;
+    docs.forEach(d => { html += docRowHTML(d); });
+    html += `</div>`;
+  }
+  return html;
+}
+
+// ── Detail ──
+function renderDetail() {
+  const doc = allDocs.find(d => d.id === currentDocId);
+  if (!doc) return `<button class="btn-back" onclick="showView('dashboard')">← Back</button><div class="card">Document not found.</div>`;
+  const cat = CATEGORIES[doc.category] || CATEGORIES.other;
+  const pri = PRIORITY[doc.priority] || PRIORITY.normal;
+
+  const fields = [
+    ['From',        doc.sender],
+    ['Amount',      doc.amount],
+    ['Due Date',    doc.dueDate],
+    ['Appointment', doc.appointmentDate],
+    ['Tax Year',    doc.taxYear],
+    ['File',        doc.originalName],
+    ['Uploaded',    fmtDate(doc.uploadedAt)],
+  ].filter(([,v])=>v);
+
+  const isImage = doc.mimeType?.startsWith('image/');
+  const isPdf = doc.mimeType === 'application/pdf';
+
+  return `<div id="detail-wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <button class="btn-back" onclick="showView('dashboard')">← Back to Dashboard</button>
+      <button class="btn-danger" onclick="deleteDoc('${doc.id}')">🗑 Remove</button>
+    </div>
+
+    <div class="detail-header">
+      <div class="detail-icon">${cat.icon}</div>
+      <div class="detail-title-area">
+        <div class="detail-title">${esc(doc.title||'Untitled')}</div>
+        <div class="detail-badges">
+          <span class="badge" style="color:${cat.color};background:${cat.bg}">${cat.label}</span>
+          <span class="badge" style="color:${pri.color};background:${pri.color}18">${pri.label}</span>
+          ${doc.status==='unread'?`<span class="badge" style="background:#1a1a2e;color:#f0e8d8">New</span>`:''}
+        </div>
+      </div>
+    </div>
+
+    ${isImage ? `<div class="card doc-image-wrap"><img src="/api/documents/${doc.id}/file" alt="Document"></div>` :
+      isPdf   ? `<div class="card pdf-placeholder">📄 PDF stored — <a href="/api/documents/${doc.id}/file" target="_blank" style="color:#2471a3">Open PDF ↗</a></div>` : ''}
+
+    <div class="card">
+      <div class="section-label">Summary</div>
+      <p style="font-size:15px;line-height:1.7;color:#444;margin:0">${esc(doc.summary||'No summary available.')}</p>
+    </div>
+
+    ${doc.actionRequired ? `<div class="card action-card">
+      <div class="section-label">⚡ Action Required</div>
+      <p style="font-size:14px;color:#555;margin:0">${esc(doc.actionRequired)}</p>
+    </div>` : ''}
+
+    <div class="detail-grid">
+      <div class="card">
+        <div class="section-label">Details</div>
+        ${fields.map(([k,v])=>`<div class="kv-row"><span class="kv-key">${k}</span><span class="kv-val">${esc(String(v))}</span></div>`).join('')}
+        ${doc.status==='unread'?`<button class="btn-success" onclick="markRead('${doc.id}')">✓ Mark as Read</button>`:''}
+        <a href="/api/documents/${doc.id}/file" target="_blank"><button class="btn-open-file" style="margin-top:6px">📂 View Original File</button></a>
+      </div>
+      ${doc.keyDetails?.length ? `<div class="card">
+        <div class="section-label">Key Facts</div>
+        ${doc.keyDetails.map(f=>`<div class="key-fact"><span style="color:#c8922a">•</span><span style="color:#555">${esc(f)}</span></div>`).join('')}
+      </div>` : ''}
+    </div>
+
+    <div class="card" id="edit-card">
+      <div class="section-label">Edit / Notes</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px">
+        <div>
+          <div style="font-size:12px;color:#999;margin-bottom:4px">Category</div>
+          <select class="edit-select" id="edit-cat">
+            ${Object.entries(CATEGORIES).map(([k,v])=>`<option value="${k}" ${doc.category===k?'selected':''}>${v.icon} ${v.label}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:12px;color:#999;margin-bottom:4px">Priority</div>
+          <select class="edit-select" id="edit-pri">
+            ${Object.entries(PRIORITY).map(([k,v])=>`<option value="${k}" ${doc.priority===k?'selected':''}>${v.label}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:12px;color:#999;margin-bottom:4px">Amount</div>
+          <input class="edit-input" id="edit-amount" value="${esc(doc.amount||'')}" placeholder="e.g. $45.00">
+        </div>
+        <div>
+          <div style="font-size:12px;color:#999;margin-bottom:4px">Due Date</div>
+          <input class="edit-input" id="edit-due" type="date" value="${doc.dueDate||''}">
+        </div>
+      </div>
+      <div style="font-size:12px;color:#999;margin-bottom:4px">Notes</div>
+      <textarea class="notes-area" id="edit-notes" placeholder="Add your own notes…">${esc(doc.notes||'')}</textarea>
+      <button class="btn-save" onclick="saveEdits('${doc.id}')">💾 Save Changes</button>
+    </div>
+  </div>`;
+}
+
+async function markRead(id) {
+  await api('PATCH', '/api/documents/' + id, { status: 'read' });
+  const doc = allDocs.find(d => d.id === id);
+  if (doc) doc.status = 'read';
+  updateSidebarCounts();
+  renderContent();
+  showToast('Marked as read');
+}
+async function deleteDoc(id) {
+  if (!confirm('Remove this document? This cannot be undone.')) return;
+  await api('DELETE', '/api/documents/' + id);
+  allDocs = allDocs.filter(d => d.id !== id);
+  updateSidebarCounts();
+  showView('dashboard');
+  showToast('Document removed');
+}
+async function saveEdits(id) {
+  const body = {
+    category: document.getElementById('edit-cat').value,
+    priority: document.getElementById('edit-pri').value,
+    amount:   document.getElementById('edit-amount').value || null,
+    dueDate:  document.getElementById('edit-due').value || null,
+    notes:    document.getElementById('edit-notes').value || null,
+  };
+  const updated = await api('PATCH', '/api/documents/' + id, body);
+  const idx = allDocs.findIndex(d => d.id === id);
+  if (idx >= 0) allDocs[idx] = { ...allDocs[idx], ...body };
+  updateSidebarCounts();
+  renderContent();
+  showToast('Changes saved');
+}
+
+// ── Utilities ──
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(iso) { if (!iso) return ''; try { return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); } catch { return iso; } }
+function showToast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = type === 'error' ? '#c0392b' : '#1a1a2e';
+  el.style.color = '#f0e8d8';
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3500);
+}
+
+// ── Init ──
+loadDocs();
+</script>
+</body>
+</html>

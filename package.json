@@ -1,7 +1,7 @@
 {
-  "name": "mail-organizer",
-  "version": "1.0.0",
-  "description": "Personal mail & document organizer with AI analysis",
+  "name": "mail-desk",
+  "version": "2.0.0",
+  "description": "Personal mail organizer with AI – PWA + mobile camera scanning",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

@@ -525,11 +525,6 @@ ${isDownload ? 'window.addEventListener("load", () => { setTimeout(downloadImage
   res.send(html);
 });
 
-// ── Catch-all ──
-app.get('*', (req, res) => {
-  res.setHeader('Content-Type', 'text/html');
-  res.send(Buffer.from(ASSETS['/'].b64, 'base64'));
-});
 
 // ── AI Analysis ──
 async function analyzeImages(filePaths, mimeType) {
@@ -573,6 +568,52 @@ async function analyzeImages(filePaths, mimeType) {
   const text = r.data.content.find(b => b.type === 'text')?.text || '{}';
   return JSON.parse(text.replace(/```json|```/g, '').trim());
 }
+
+// ── API: backup status & manual trigger ──
+app.get('/api/backup', (req, res) => {
+  const backups = listBackups();
+  res.json({ backups, currentDocCount: readDocs().length });
+});
+
+app.post('/api/backup', (req, res) => {
+  try {
+    runBackup();
+    const backups = listBackups();
+    res.json({ success: true, message: 'Backup created', backups });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── API: restore from backup ──
+app.post('/api/backup/restore/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    // Security: only allow our own backup filenames
+    if (!filename.match(/^documents-[\d\-T]+\.json$/)) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+    const backupPath = path.join(BACKUP_DIR, filename);
+    if (!fs.existsSync(backupPath)) return res.status(404).json({ error: 'Backup not found' });
+
+    // Save current state as a backup before restoring
+    runBackup();
+
+    const backupData = fs.readFileSync(backupPath, 'utf8');
+    const docs = JSON.parse(backupData);
+    fs.writeFileSync(META_FILE, backupData, 'utf8');
+    console.log(`[Backup] Restored ${docs.length} docs from ${filename}`);
+    res.json({ success: true, docCount: docs.length, message: `Restored ${docs.length} documents` });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Catch-all ──
+app.get('*', (req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.send(Buffer.from(ASSETS['/'].b64, 'base64'));
+});
 
 app.listen(PORT, () => {
   console.log(`Mail Desk running on port ${PORT}`);
@@ -636,43 +677,4 @@ function listBackups() {
       });
   } catch (e) { return []; }
 }
-
-// ── API: backup status & manual trigger ──
-app.get('/api/backup', (req, res) => {
-  const backups = listBackups();
-  res.json({ backups, currentDocCount: readDocs().length });
-});
-
-app.post('/api/backup', (req, res) => {
-  try {
-    runBackup();
-    const backups = listBackups();
-    res.json({ success: true, message: 'Backup created', backups });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ── API: restore from backup ──
-app.post('/api/backup/restore/:filename', (req, res) => {
-  try {
-    const filename = req.params.filename;
-    // Security: only allow our own backup filenames
-    if (!filename.match(/^documents-[\d\-T]+\.json$/)) {
-      return res.status(400).json({ error: 'Invalid filename' });
-    }
-    const backupPath = path.join(BACKUP_DIR, filename);
-    if (!fs.existsSync(backupPath)) return res.status(404).json({ error: 'Backup not found' });
-
-    // Save current state as a backup before restoring
-    runBackup();
-
-    const backupData = fs.readFileSync(backupPath, 'utf8');
-    const docs = JSON.parse(backupData);
-    fs.writeFileSync(META_FILE, backupData, 'utf8');
-    console.log(`[Backup] Restored ${docs.length} docs from ${filename}`);
-    res.json({ success: true, docCount: docs.length, message: `Restored ${docs.length} documents` });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
+      
